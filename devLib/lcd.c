@@ -356,6 +356,58 @@ void lcdPrintf (const int fd, const char *message, ...)
   lcdPuts (fd, buffer) ;
 }
 
+void lcdReset(const int fd)
+{
+  struct lcdDataStruct *lcd = lcds[fd];
+  int i = 0;
+  unsigned char func;
+
+  
+  digitalWrite (lcd->rsPin,   0) ; pinMode (lcd->rsPin,   OUTPUT);
+  digitalWrite (lcd->strbPin, 0) ; pinMode (lcd->strbPin, OUTPUT);
+
+  for (i = 0 ; i < lcd->bits ; ++i)
+    {
+      digitalWrite (lcd->dataPins [i], 0);
+      pinMode      (lcd->dataPins [i], OUTPUT) ;
+    }
+  delay (35) ; // mS    
+
+  if (lcd->bits == 4)
+    {
+      func = LCD_FUNC | LCD_FUNC_DL ;                     // Set 8-bit mode 3 times
+      put4Command (lcd, func >> 4) ; delay (35) ;
+      put4Command (lcd, func >> 4) ; delay (35) ;
+      put4Command (lcd, func >> 4) ; delay (35) ;
+      func = LCD_FUNC ;                                   // 4th set: 4-bit mode
+      put4Command (lcd, func >> 4) ; delay (35) ;
+      lcd->bits = 4 ;
+    }
+  else
+    {
+      func = LCD_FUNC | LCD_FUNC_DL ;
+      putCommand  (lcd, func     ) ; delay (35) ;
+      putCommand  (lcd, func     ) ; delay (35) ;
+      putCommand  (lcd, func     ) ; delay (35) ;
+    }
+
+  if (lcd->rows > 1)
+    {
+      func |= LCD_FUNC_N ;
+      putCommand (lcd, func) ; delay (35) ;
+    }
+
+  // Rest of the initialisation sequence
+
+  lcdDisplay     (fd, TRUE) ;
+  lcdCursor      (fd, FALSE) ;
+  lcdCursorBlink (fd, FALSE) ;
+  lcdClear       (fd) ;
+
+  putCommand (lcd, LCD_ENTRY   | LCD_ENTRY_ID) ;
+  putCommand (lcd, LCD_CDSHIFT | LCD_CDSHIFT_RL) ;
+}
+
 
 /*
  * lcdInit:
